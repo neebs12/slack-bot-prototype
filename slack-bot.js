@@ -1,7 +1,10 @@
-const { App } = require("@slack/bolt");
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config(); // prior EVERYTHING else otherwise .env arent loaded properly
 
-const app = new App({
+import slackBolt from "@slack/bolt";
+import { generate } from "./open-ai-interface.js";
+
+const app = new slackBolt.App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   token: process.env.SLACK_BOT_TOKEN,
   socketMode: true,
@@ -17,10 +20,15 @@ app.event("app_home_opened", ({ event, say }) => {
   say(`Hello world, <@${event.user}>!`);
 });
 
-app.message("hello", async ({ message, say }) => {
+app.message(/^hello tutor[.!]?/i, async ({ message, say }) => {
   // say() sends a message to the channel where the event was triggered
-  console.log("Someone said hello!");
-  await say(`Hey there <@${message.user}>!`);
+  console.log("Hello tutor is triggered with message: ", message.text);
+  const before = performance.now();
+  // console.log({ text: message.text });
+  // await say(`Hey there <@${message.user}>!`);
+  await say(`${await generate(message)}`);
+  const after = performance.now();
+  console.log(`Call to generate took ${after - before} milliseconds`);
 });
 
 (async () => {
