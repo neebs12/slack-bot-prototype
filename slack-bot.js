@@ -4,23 +4,28 @@ require("dotenv").config();
 const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   token: process.env.SLACK_BOT_TOKEN,
+  socketMode: true,
+  appToken: process.env.SLACK_APP_TOKEN,
+  // Socket Mode doesn't listen on a port, but in case you want your app to respond to OAuth,
+  // you still need to listen on some port!
+  port: process.env.PORT || 3000,
 });
 
 /* Add functionality here */
 app.event("app_home_opened", ({ event, say }) => {
+  console.log("App has been opened!");
   say(`Hello world, <@${event.user}>!`);
 });
 
-// Listen for messages in the #random channel
-app.message("#random", async ({ message, say }) => {
-  // Say yes in the same channel
-  console.log({ message });
-  await say("Yes");
+app.message("hello", async ({ message, say }) => {
+  // say() sends a message to the channel where the event was triggered
+  console.log("Someone said hello!");
+  await say(`Hey there <@${message.user}>!`);
 });
 
 (async () => {
-  // Start the app
-  await app.start(process.env.PORT || 3000);
+  // Start your app
+  await app.start();
 
   console.log("⚡️ Bolt app is running!");
 })();
