@@ -7,6 +7,10 @@ const app = new App({
 });
 
 /* Add functionality here */
+app.event("app_home_opened", ({ event, say }) => {
+  say(`Hello world, <@${event.user}>!`);
+});
+
 // Listen for messages in the #random channel
 app.message("#random", async ({ message, say }) => {
   // Say yes in the same channel
