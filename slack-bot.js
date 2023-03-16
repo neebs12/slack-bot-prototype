@@ -7,6 +7,12 @@ const app = new App({
 });
 
 /* Add functionality here */
+// Listen for messages in the #random channel
+app.message("#random", async ({ message, say }) => {
+  // Say yes in the same channel
+  console.log({ message });
+  await say("Yes");
+});
 
 (async () => {
   // Start the app
