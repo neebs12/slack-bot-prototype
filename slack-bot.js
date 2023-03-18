@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config(); // prior EVERYTHING else otherwise .env arent loaded properly
 
 import slackBolt from "@slack/bolt";
-import { generate, generate2 } from "./open-ai-interface.js";
+import { generate } from "./open-ai-interface.js";
 
 const app = new slackBolt.App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -15,34 +15,9 @@ const app = new slackBolt.App({
 });
 
 /* Add functionality here */
-app.event("app_home_opened", ({ event, say }) => {
-  console.log("App has been opened!");
-  say(`Hello world, <@${event.user}>!`);
+app.message(/^health check[.!]?/i, async ({ message, say }) => {
+  await say(`Your message is: ${message.text}, and I am ok!!`);
 });
-
-app.message(/^hello tutor[.!]?/i, async ({ message, say }) => {
-  // say() sends a message to the channel where the event was triggered
-  console.log("Hello tutor is triggered with message: ", message.text);
-  const before = performance.now();
-  await say(`${await generate(message)}`);
-  const after = performance.now();
-  console.log(`Call to generate took ${after - before} milliseconds`);
-});
-
-/*
-There needs to be a few things which happen here:
-- the bot needs to be able to listen to the thread
-- the bot needs to be able to only reply to the person who started the thread (this seems to make the most sense)
-- how to handle multiple conseq messages from a valid user? I guess thats ok.
-- so ideal message structure is:
-{
-  system: "you are a socratic tutor, your personality is a helpful teacher that does not give the answer but helps the student to find the answer",
-  user1: `{first message}`,
-  agent: `{agent message}`, etc.
-}
-- we need to be aware of the token limitations of this bot, so this needs to be considered somehow.
-- need to check if the message is from a user or a bot
-*/
 
 const triggerRegex = /^tutor:[.!]?/i;
 app.message(triggerRegex, async ({ message, say }) => {
@@ -55,15 +30,14 @@ app.message(triggerRegex, async ({ message, say }) => {
       channel: message.channel,
       ts: message.thread_ts,
     });
-    // console.log({ messages: messages.map((m) => m.text) });
-    generatedReply = await generate2(messages, triggerRegex);
+    generatedReply = await generate(messages, triggerRegex);
   } else {
     // so the generated reply here will be a normal generation message
-    generatedReply = await generate2([message], triggerRegex);
+    generatedReply = await generate([message], triggerRegex);
   }
 
   await say({
-    text: `Bot message is: ${generatedReply}`,
+    text: `${generatedReply}`,
     thread_ts: message.ts,
     reply_broadcast: false, // dont post reply to channel
   });
