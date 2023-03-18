@@ -63,15 +63,37 @@ const constructMessageArray = (messagesArray, triggerRegex) => {
     messagesArray.find((message) => message.bot_id) ?? { user: undefined }
   ).user;
   // cool! now we have isolated the user and bot ids
-  // we then filter the messages according to the existence of the user and bot ids, ie if theres a second user that is not the first bot OR the parent user, we ignore it
   const filteredMessages = messagesArray.filter((message) => {
+    // removes non first user && bot messages
     return message.user === userId || message.user === botId;
   });
   const mappedMessages = filteredMessages.map((message) => {
     const role = message.user === userId ? "user" : "assistant";
-    return { role, content: message.text.replace(triggerRegex, "").trim() };
+    return { role, content: processMessage(message.text, triggerRegex) };
   });
   return mappedMessages;
+};
+
+const processMessage = (text, regex) => {
+  const removeByRegex = (input, regex) => {
+    return input.replace(regex, "");
+  };
+
+  const htmlDecode = (input) => {
+    const entities = {
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+    };
+    return input.replace(/&amp;|&lt;|&gt;/g, (m) => entities[m]);
+  };
+
+  const addNewline = (input) => {
+    // adds a `\n` before and after an "```" if it is not already there
+    return input.replace(/(\\n)?```(\\n)?/g, "\n```\n");
+  };
+
+  return addNewline(htmlDecode(removeByRegex(text, regex))).trim();
 };
 
 export { generate, generate2 };
