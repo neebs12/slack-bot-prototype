@@ -14,33 +14,37 @@ const app = new slackBolt.App({
   port: process.env.PORT || 3000,
 });
 
+app.event("message", async ({ event, say }) => {
+  // Check if the message starts with Ask Tutor: and has no thread_ts
+  let generatedReply;
+  if (event.text.startsWith("Ask Tutor:") && !event.thread_ts) {
+    generatedReply = await generate([event]);
+  } else if (
+    // is a reply to a message, is not a bot message, the follow up message is from an identical user
+    event.thread_ts &&
+    event.subtype !== "bot_message" &&
+    event.user === event.parent_user_id
+  ) {
+    const { messages } = await app.client.conversations.replies({
+      channel: event.channel,
+      ts: event.thread_ts,
+    });
+    generatedReply = await generate(messages);
+  } else {
+    // not a message we want to reply to
+    console.log({ message: "message is ignored" });
+    return;
+  }
+  await say({
+    text: generatedReply,
+    thread_ts: event.ts,
+    reply_broadcast: false, // dont post reply to channel
+  });
+});
+
 /* Add functionality here */
 app.message(/^health check[.!]?/i, async ({ message, say }) => {
   await say(`Your message is: ${message.text}, and I am ok!!`);
-});
-
-const triggerRegex = /^tutor:[.!]?/i;
-app.message(triggerRegex, async ({ message, say }) => {
-  // dont reply to bot messages
-  if (message.subtype === "bot_message") return;
-  let generatedReply;
-  if (message.thread_ts) {
-    // get all the converstations in the current thread where the message was sent
-    const { messages } = await app.client.conversations.replies({
-      channel: message.channel,
-      ts: message.thread_ts,
-    });
-    generatedReply = await generate(messages, triggerRegex);
-  } else {
-    // so the generated reply here will be a normal generation message
-    generatedReply = await generate([message], triggerRegex);
-  }
-
-  await say({
-    text: `${generatedReply}`,
-    thread_ts: message.ts,
-    reply_broadcast: false, // dont post reply to channel
-  });
 });
 
 (async () => {

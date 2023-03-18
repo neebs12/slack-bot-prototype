@@ -7,7 +7,7 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const generate = async (slackMessages, triggerRegex) => {
+const generate = async (slackMessages, triggerRegex = new RegExp()) => {
   const validMsgArry = constructMessageArray(slackMessages, triggerRegex);
   const systemObject = {
     role: "system",
@@ -17,7 +17,6 @@ const generate = async (slackMessages, triggerRegex) => {
   const validMsgArryWithSystem = [systemObject, ...validMsgArry];
 
   console.log({ validMsgArryWithSystem });
-  // return JSON.stringify(validMsgArryWithSystem);
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
@@ -25,8 +24,6 @@ const generate = async (slackMessages, triggerRegex) => {
     });
 
     return completion.data.choices[0].message.content;
-    // return completion.data.choices[0].text;
-    // return "valid but processing reponse";
   } catch (e) {
     console.log(e);
     return "Sorry, I don't understand.";
@@ -40,12 +37,19 @@ const constructMessageArray = (messagesArray, triggerRegex) => {
   ).user;
   // cool! now we have isolated the user and bot ids
   const filteredMessages = messagesArray.filter((message) => {
-    // removes non first user && bot messages
+    // only recognize first user messages and valid bot message
     return message.user === userId || message.user === botId;
   });
-  const mappedMessages = filteredMessages.map((message) => {
+  const mappedMessages = filteredMessages.map((message, ind) => {
     const role = message.user === userId ? "user" : "assistant";
-    return { role, content: processMessage(message.text, triggerRegex) };
+    // remind system that it is a socratic tutor
+    const content = processMessage(message.text, triggerRegex).concat(
+      ind === filteredMessages.length - 1
+        ? ", remember - you're a SOCRATIC TUTOR!"
+        : ""
+    );
+
+    return { role, content };
   });
   return mappedMessages;
 };
